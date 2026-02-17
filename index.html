@@ -18,19 +18,20 @@
 
 <body>
   <script type="module">
-    import { UNDO_SVG, REDO_SVG, GEAR_SVG, FOLDER_SVG } from "./scripts/ui/components/icons.js";
-    
+    import { UNDO_SVG, REDO_SVG, GEAR_SVG, FOLDER_SVG, CALCULATOR_SVG } from "./scripts/ui/components/icons.js";
+
     document.addEventListener('DOMContentLoaded', () => {
       const undoBtn = document.getElementById('undoBtn');
       const redoBtn = document.getElementById('redoBtn');
       const mainsettings = document.getElementById('mainsettings');
       const settingsBtn = document.getElementById('settingsBtn');
-      
+      const scenariosBtn = document.getElementById('scenariosBtn');
+
       if (undoBtn) undoBtn.innerHTML = UNDO_SVG;
-      if (redoBtn) redoBtn.innerHTML = REDO_SVG;
       if (redoBtn) redoBtn.innerHTML = REDO_SVG;
       if (mainsettings) mainsettings.innerHTML = GEAR_SVG;
       if (settingsBtn) settingsBtn.innerHTML = FOLDER_SVG;
+      if (scenariosBtn) scenariosBtn.innerHTML = CALCULATOR_SVG;
     });
   </script>
 
@@ -85,20 +86,20 @@
   <main id="ffScrollArea" class="ff-scroll-area">
 
   <div class="table-container ff-year-cards-container">
-    <table class="year-grid ff-year-cards-table"> 
+    <table class="year-grid ff-year-cards-table">
       <thead>
         <tr>
           <th data-i18n="table.headers.month"></th>
           <th data-i18n="table.headers.income"></th>
           <th data-i18n="table.headers.expense"></th>
           <th class="saving-cell" data-i18n="table.headers.savings"></th>
-          <th data-i18n="table.headers.bank_balance"></th> 
-          <th data-i18n="table.headers.savings_balance"></th> 
+          <th data-i18n="table.headers.bank_balance"></th>
+          <th data-i18n="table.headers.savings_balance"></th>
         </tr>
       </thead>
       <tbody id="yearTableBody"></tbody>
       <tfoot>
-        <tr id="yearTotalRow"></tr> 
+        <tr id="yearTotalRow"></tr>
       </tfoot>
     </table>
   </div>
