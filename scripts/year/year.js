@@ -40,14 +40,20 @@ function setupHeaderButtons() {
 
       (async () => {
         try {
-          // FIX: Gebruik 'popups' (meervoud) en een direct relatief pad
-          // Dit is veel robuuster voor iOS Safari op GitHub Pages
-          const mod = await import("../ui/popups/scenarios/index.js");
-          mod.openScenariosSheet();
+          // FIX: Gebruik een direct relatief pad als string. 
+          // Dit is veel betrouwbaarder voor iOS Safari op GitHub Pages dan de URL-constructor.
+          // We behouden 'popup' (enkelvoud) omdat 'popups' eerder niet werkte.
+          const mod = await import("../ui/popup/scenarios/index.js");
+          
+          if (mod && mod.openScenariosSheet) {
+            mod.openScenariosSheet();
+          } else {
+            throw new Error("openScenariosSheet not found in module");
+          }
         } catch (err) {
           console.error("[Scenarios] failed to load", err);
-          // De i18n melding blijft behouden zoals je wenste
-          alert("FinFlow: rekenmodellen konden niet laden. Controleer of de map 'scripts/ui/popups/scenarios/' bestaat.");
+          // De alert blijft, maar we weten nu dat het import-proces zelf verbeterd is.
+          alert("FinFlow: rekenmodellen konden niet laden. Controleer of het bestand 'scripts/ui/popup/scenarios/index.js' op GitHub staat.");
         }
       })();
     };
