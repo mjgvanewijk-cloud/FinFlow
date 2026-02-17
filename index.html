@@ -128,101 +128,7 @@
     <div id="sheetForm"></div>
   </div>
 
-  <!-- FF_DIAG_BOOT 20260217-224726 -->
-<script>
-  (function(){
-    const BUILD = "20260217-224726";
-    function ensureOverlay(){
-      let o = document.getElementById("ffBootDiag");
-      if (o) return o;
-      o = document.createElement("div");
-      o.id = "ffBootDiag";
-      o.style.cssText = "position:fixed;inset:0;z-index:999999;background:rgba(0,0,0,.92);color:#fff;font:12px/1.4 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;padding:14px;display:none;overflow:auto;-webkit-overflow-scrolling:touch;";
-      o.innerHTML = '<div style="font-weight:700;font-size:14px;margin-bottom:8px;">FinFlow boot diagnostics</div>'
-        + '<div id="ffBootDiagMeta" style="opacity:.85;margin-bottom:10px;"></div>'
-        + '<pre id="ffBootDiagBody" style="white-space:pre-wrap;word-break:break-word;margin:0;"></pre>'
-        + '<div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">'
-        + '<button id="ffBootDiagCopy" style="padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;">Copy</button>'
-        + '<button id="ffBootDiagHide" style="padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;">Hide</button>'
-        + '</div>';
-      document.body.appendChild(o);
-      o.querySelector("#ffBootDiagHide").onclick = () => o.style.display = "none";
-      o.querySelector("#ffBootDiagCopy").onclick = async () => {
-        const txt = o.querySelector("#ffBootDiagBody").textContent || "";
-        try { await navigator.clipboard.writeText(txt); } catch (e) {}
-      };
-      return o;
-    }
-    function show(obj){
-      const o = ensureOverlay();
-      o.style.display = "block";
-      const meta = o.querySelector("#ffBootDiagMeta");
-      const body = o.querySelector("#ffBootDiagBody");
-      meta.textContent = `BUILD $20260217-224726 | ` + location.href;
-      body.textContent = JSON.stringify(obj, null, 2);
-    }
-    window.__ffShowBootDiag = show;
-    // Minimal banner so we know this index is live
-    document.addEventListener("DOMContentLoaded", () => {
-      const b = document.createElement("div");
-      b.id = "ffBootDiagBanner";
-      b.style.cssText = "position:fixed;left:12px;right:12px;top:12px;z-index:999998;padding:8px 10px;border-radius:12px;background:rgba(255,0,140,.18);border:1px solid rgba(255,0,140,.35);color:#fff;font:12px -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);";
-      b.textContent = "FF_DIAG_BOOT " + BUILD + " (tap for details)";
-      b.onclick = () => show({ title: "banner tapped", build: BUILD, href: location.href, ua: navigator.userAgent });
-      document.body.appendChild(b);
-    });
-  })();
-</script>
-
-<script type="module">
-  const BUILD = "20260217-224726";
-  const src = "./scripts/main.js";
-  async function diag(){
-    // 1) fetch status + headers
-    let fetchInfo = null;
-    try {
-      const r = await fetch(src + "?v=" + Date.now(), { cache: "no-store" });
-      const ct = r.headers.get("content-type");
-      const cc = r.headers.get("cache-control");
-      const txt = await r.text();
-      fetchInfo = {
-        status: r.status,
-        ok: r.ok,
-        contentType: ct,
-        cacheControl: cc,
-        head: txt.slice(0, 120)
-      };
-    } catch (e) {
-      fetchInfo = { fetchError: String(e && (e.message||e)) };
-    }
-
-    // 2) dynamic import to get a real error message on iOS
-    try {
-      await import(src + "?v=" + Date.now());
-    } catch (e) {
-      const info = {
-        title: "main.js import failed",
-        build: BUILD,
-        href: location.href,
-        ua: navigator.userAgent,
-        fetch: fetchInfo,
-        error: {
-          name: e && e.name,
-          message: e && e.message,
-          stack: e && e.stack
-        }
-      };
-      if (window.__ffShowBootDiag) window.__ffShowBootDiag(info);
-      else alert(JSON.stringify(info, null, 2));
-      return;
-    }
-
-    // If import succeeds, we can hide banner quickly
-    const banner = document.getElementById("ffBootDiagBanner");
-    if (banner) banner.style.display = "none";
-  }
-  diag();
-</script>
+  
 
   <script>
     document.getElementById("mainsettings").onclick = () => {
@@ -230,5 +136,194 @@
       p.style.display = (p.style.display === "none" || p.style.display === "") ? "block" : "none";
     };
   </script>
+
+<script type="module">
+(() => {
+  const BUILD = "20260217-225408";
+  const ENTRY = new URL("./scripts/main.js", location.href).href;
+
+  const overlay = document.createElement("div");
+  overlay.id = "ffBootDiag";
+  overlay.style.cssText = [
+    "position:fixed","inset:0","z-index:2147483647",
+    "background:rgba(0,0,0,0.92)","color:#fff",
+    "font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif",
+    "padding:14px","overflow:auto"
+  ].join(";");
+  overlay.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <div style="font-weight:700">FinFlow boot diag</div>
+      <div style="opacity:.7">build $20260217-225408</div>
+      <div style="margin-left:auto;opacity:.7;font-size:12px">${location.href}</div>
+    </div>
+    <div id="ffBootDiagStatus" style="opacity:.85;margin-bottom:10px">Checking module graph…</div>
+    <pre id="ffBootDiagOut" style="white-space:pre-wrap;word-break:break-word;background:rgba(255,255,255,0.06);padding:10px;border-radius:10px"></pre>
+    <div style="display:flex;gap:10px;margin-top:10px;align-items:center">
+      <button id="ffBootDiagCopy" style="padding:10px 12px;border-radius:10px;border:0;font-weight:700">Copy</button>
+      <button id="ffBootDiagHide" style="padding:10px 12px;border-radius:10px;border:0;opacity:.85">Hide</button>
+      <div style="margin-left:auto;opacity:.7;font-size:12px">If everything is OK, this screen will disappear.</div>
+    </div>
+  `;
+  document.documentElement.appendChild(overlay);
+
+  const outEl = overlay.querySelector("#ffBootDiagOut");
+  const statusEl = overlay.querySelector("#ffBootDiagStatus");
+  const copyBtn = overlay.querySelector("#ffBootDiagCopy");
+  const hideBtn = overlay.querySelector("#ffBootDiagHide");
+
+  const report = {
+    title: "FinFlow module graph check",
+    build: BUILD,
+    href: location.href,
+    ua: navigator.userAgent,
+    entry: ENTRY,
+    checked: [],
+    problems: [],
+  };
+
+  const log = (obj) => {
+    try {
+      outEl.textContent = JSON.stringify(obj, null, 2);
+    } catch (e) {
+      outEl.textContent = String(obj);
+    }
+  };
+  log(report);
+
+  copyBtn.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(outEl.textContent || "");
+      statusEl.textContent = "Copied to clipboard.";
+    } catch {
+      statusEl.textContent = "Copy failed. Select text manually.";
+    }
+  });
+  hideBtn.addEventListener("click", () => {
+    overlay.style.display = "none";
+  });
+
+  const importRegexes = [
+    /\bimport\s+[^;]*?\sfrom\s*["']([^"']+)["']/g,     // static
+    /\bimport\s*\(\s*["']([^"']+)["']\s*\)/g          // dynamic with literal
+  ];
+
+  function extractSpecs(srcText) {
+    const specs = new Set();
+    for (const rx of importRegexes) {
+      rx.lastIndex = 0;
+      let m;
+      while ((m = rx.exec(srcText))) {
+        const spec = (m[1] || "").trim();
+        if (!spec) continue;
+        if (spec.startsWith(".") ) specs.add(spec);
+      }
+    }
+    return Array.from(specs);
+  }
+
+  async function fetchModule(url) {
+    let res, text = "";
+    try {
+      res = await fetch(url, { cache: "no-store" });
+      const ct = res.headers.get("content-type") || "";
+      // Only read body for JS-like responses; still read some for diagnostics
+      text = await res.text();
+      return {
+        url,
+        ok: res.ok,
+        status: res.status,
+        contentType: ct,
+        head: text.slice(0, 160),
+        text
+      };
+    } catch (e) {
+      return {
+        url,
+        ok: false,
+        status: 0,
+        contentType: "",
+        head: "",
+        error: { name: e?.name, message: e?.message }
+      };
+    }
+  }
+
+  function isHtml(ct, head) {
+    if ((ct || "").includes("text/html")) return true;
+    const h = (head || "").trim().toLowerCase();
+    return h.startsWith("<!doctype") || h.startsWith("<html");
+  }
+
+  (async () => {
+    const q = [ENTRY];
+    const seen = new Set();
+    while (q.length) {
+      const url = q.shift();
+      if (seen.has(url)) continue;
+      seen.add(url);
+
+      statusEl.textContent = "Fetching " + url.replace(location.origin, "");
+      const info = await fetchModule(url);
+
+      const entry = {
+        url: info.url,
+        ok: info.ok,
+        status: info.status,
+        contentType: info.contentType,
+        head: info.head
+      };
+      report.checked.push(entry);
+
+      if (!info.ok) {
+        report.problems.push({ type: "fetch-failed", ...entry, error: info.error || null });
+        log(report);
+        continue;
+      }
+      if (isHtml(info.contentType, info.head)) {
+        report.problems.push({ type: "html-returned", ...entry });
+        log(report);
+        continue;
+      }
+
+      // parse imports
+      const specs = extractSpecs(info.text || "");
+      for (const spec of specs) {
+        const depUrl = new URL(spec, url).href;
+        if (!seen.has(depUrl)) q.push(depUrl);
+      }
+
+      // keep UI updated
+      log(report);
+      // safety cap
+      if (report.checked.length > 600) {
+        report.problems.push({ type: "cap", message: "Too many modules; stopping at 600." });
+        break;
+      }
+    }
+
+    if (report.problems.length) {
+      statusEl.textContent = "Problems found. Paste this JSON back into chat.";
+      log(report);
+      return;
+    }
+
+    statusEl.textContent = "All modules fetched OK. Importing entry…";
+    try {
+      await import(ENTRY + "?v=" + BUILD);
+      overlay.remove();
+    } catch (e) {
+      report.title = "Entry import failed after graph OK";
+      report.error = {
+        name: e?.name,
+        message: e?.message,
+        stack: e?.stack
+      };
+      statusEl.textContent = "Import failed. Paste JSON back into chat.";
+      log(report);
+    }
+  })();
+})();
+</script>
+
 </body>
 </html>
