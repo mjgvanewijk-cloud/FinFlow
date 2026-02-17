@@ -29,82 +29,6 @@ import { maybeHandleTrialExpiryDowngrade } from "./core/state/premium-trial-expi
 // Passieve context-help (wolkje + highlights bij idle)
 import { initHelpCloud } from "./ui/helpcloud/index.js";
 
-// ============================================================
-// iOS/Safari diagnostics (only shows when boot fails)
-// - Prevents the "black screen + only nav-pill" symptom from being silent
-// - Does NOT change normal behavior when boot succeeds
-// ============================================================
-
-function showFatalBootOverlay(title, details) {
-  try {
-    // Avoid double overlays
-    const existing = document.getElementById("ffFatalBootOverlay");
-    if (existing) existing.remove();
-
-    const overlay = document.createElement("div");
-    overlay.id = "ffFatalBootOverlay";
-    overlay.style.position = "fixed";
-    overlay.style.inset = "0";
-    overlay.style.zIndex = "999999";
-    overlay.style.background = "rgba(0,0,0,.72)";
-    overlay.style.backdropFilter = "blur(10px)";
-    overlay.style.webkitBackdropFilter = "blur(10px)";
-    overlay.style.display = "flex";
-    overlay.style.alignItems = "center";
-    overlay.style.justifyContent = "center";
-    overlay.style.padding = "16px";
-
-    const card = document.createElement("div");
-    card.style.width = "min(560px, 100%)";
-    card.style.background = "rgba(28,28,30,.98)";
-    card.style.border = "1px solid rgba(255,255,255,.14)";
-    card.style.borderRadius = "18px";
-    card.style.boxShadow = "0 18px 40px rgba(0,0,0,.45)";
-    card.style.padding = "16px";
-    card.style.color = "#fff";
-    card.style.fontFamily = "-apple-system, system-ui, Segoe UI, Roboto, Arial";
-
-    const h = document.createElement("div");
-    h.style.fontSize = "16px";
-    h.style.fontWeight = "800";
-    h.style.marginBottom = "10px";
-    h.textContent = title || "FinFlow kon niet starten";
-
-    const p = document.createElement("pre");
-    p.style.whiteSpace = "pre-wrap";
-    p.style.wordBreak = "break-word";
-    p.style.fontSize = "12px";
-    p.style.lineHeight = "1.35";
-    p.style.opacity = "0.92";
-    p.style.margin = "0";
-    p.textContent = String(details || "Onbekende fout");
-
-    const hint = document.createElement("div");
-    hint.style.marginTop = "12px";
-    hint.style.fontSize = "12px";
-    hint.style.opacity = "0.85";
-    hint.textContent = "Tip: sluit Safari volledig (app switcher) en open opnieuw. Als dit blijft: wis Safari websitegegevens voor mjgvanewijk-cloud.github.io.";
-
-    card.appendChild(h);
-    card.appendChild(p);
-    card.appendChild(hint);
-    overlay.appendChild(card);
-    document.body.appendChild(overlay);
-  } catch (_) {}
-}
-
-// Show runtime failures on-screen (iPhone Safari often hides console)
-try {
-  window.addEventListener("error", (e) => {
-    const msg = e?.error?.stack || e?.message || String(e);
-    showFatalBootOverlay("FinFlow runtime error", msg);
-  });
-  window.addEventListener("unhandledrejection", (e) => {
-    const msg = e?.reason?.stack || e?.reason?.message || String(e?.reason || e);
-    showFatalBootOverlay("FinFlow promise error", msg);
-  });
-} catch (_) {}
-
 /**
  * Centraal beheer van data-wijzigingen.
  */
@@ -261,17 +185,24 @@ function setupUndoRedoUI() {
 
 window.handleDataChanged = handleDataChanged;
 
+
+// --- SAFE SETTINGS LOADER (iPhone Safari can have corrupt localStorage JSON) ---
+function safeLoadFinflowSettings() {
+  try {
+    const raw = localStorage.getItem("finflow_settings");
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return (parsed && typeof parsed === "object") ? parsed : {};
+  } catch (e) {
+    // Corrupt/partial JSON in storage -> reset just this key, keep app booting
+    try { localStorage.removeItem("finflow_settings"); } catch (_) {}
+    return {};
+  }
+}
+// --- END SAFE SETTINGS LOADER ---
+
 function updateStaticUI() {
-    // IMPORTANT (iPhone/Safari + GitHub Pages): localStorage can contain
-    // corrupted/partial JSON strings after upgrades or storage pressure.
-    // Never JSON.parse the raw string here; use the hardened loader.
-    let settings = {};
-    try {
-      // loadSettings() already provides defaults + safe parse.
-      settings = (typeof loadSettings === "function" ? loadSettings() : {}) || {};
-    } catch (_) {
-      settings = {};
-    }
+    const settings = safeLoadFinflowSettings();
     const isPremium = settings.isPremium === true;
 
     const elements = document.querySelectorAll('[data-i18n]');
@@ -431,8 +362,7 @@ let __bootFinalized = false;
         setupUndoRedoUI();
 
         handleDataChanged();
-        // Never parse raw localStorage here; use hardened loader.
-        const settings = loadSettings() || {};
+        const settings = safeLoadFinflowSettings();
         
         if (!settings.welcomeShown) {
             document.body.classList.add('wizard-active');
@@ -451,8 +381,6 @@ let __bootFinalized = false;
 } catch (e) {
         // Tekst aangepast naar i18n
         console.error(t("errors.boot.critical_failed"), e.message, e.stack);
-        // Also surface on-screen (prevents silent black screen on iPhone)
-        showFatalBootOverlay(t("errors.boot.critical_failed"), e?.stack || e?.message || String(e));
     }
     finally {
         finalizeBoot();
