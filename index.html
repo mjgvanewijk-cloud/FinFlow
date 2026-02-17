@@ -17,37 +17,6 @@
 </head>
 
 <body>
-
-  <!-- FF_BUILD_MARKER_START -->
-  <div id="ffBuildMarker" style="position:fixed;top:0;left:0;right:0;z-index:999999;background:#ff2d55;color:#fff;font:12px/1.4 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;padding:6px 10px;text-align:center;pointer-events:none;">
-    FF BUILD 20260217-224143 — if you see only black screen, module boot failed
-  </div>
-  <script>
-  (function() {
-    window.__FF_BUILD = "20260217-224143";
-    console.log("[FF] inline boot OK", window.__FF_BUILD, location.href);
-    window.addEventListener("error", function(ev){
-      try {
-        if (ev && ev.filename && (ev.filename.includes("scripts/") || ev.filename.includes("main.js"))) {
-          ffShowBootError("window.error: " + (ev.message || "unknown"), {
-            filename: ev.filename, lineno: ev.lineno, colno: ev.colno, stack: (ev.error && ev.error.stack) ? ev.error.stack : ""
-          });
-        }
-      } catch(e) {}
-    });
-    window.addEventListener("unhandledrejection", function(ev){
-      try {
-        var r = ev && ev.reason;
-        ffShowBootError("unhandledrejection", {
-          reason: (r && r.message) ? r.message : String(r || ""),
-          stack: (r && r.stack) ? r.stack : ""
-        });
-      } catch(e) {}
-    });
-  })();
-  </script>
-  <!-- FF_BUILD_MARKER_END -->
-
   <script type="module">
     import { UNDO_SVG, REDO_SVG, GEAR_SVG, FOLDER_SVG } from "./scripts/ui/components/icons.js";
     
@@ -159,49 +128,101 @@
     <div id="sheetForm"></div>
   </div>
 
-  
-  <script>
-  // Failsafe: show a diagnostic overlay if ESM entry fails to load/parse.
-  function ffShowBootError(title, info) {
+  <!-- FF_DIAG_BOOT 20260217-224726 -->
+<script>
+  (function(){
+    const BUILD = "20260217-224726";
+    function ensureOverlay(){
+      let o = document.getElementById("ffBootDiag");
+      if (o) return o;
+      o = document.createElement("div");
+      o.id = "ffBootDiag";
+      o.style.cssText = "position:fixed;inset:0;z-index:999999;background:rgba(0,0,0,.92);color:#fff;font:12px/1.4 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;padding:14px;display:none;overflow:auto;-webkit-overflow-scrolling:touch;";
+      o.innerHTML = '<div style="font-weight:700;font-size:14px;margin-bottom:8px;">FinFlow boot diagnostics</div>'
+        + '<div id="ffBootDiagMeta" style="opacity:.85;margin-bottom:10px;"></div>'
+        + '<pre id="ffBootDiagBody" style="white-space:pre-wrap;word-break:break-word;margin:0;"></pre>'
+        + '<div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">'
+        + '<button id="ffBootDiagCopy" style="padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;">Copy</button>'
+        + '<button id="ffBootDiagHide" style="padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;">Hide</button>'
+        + '</div>';
+      document.body.appendChild(o);
+      o.querySelector("#ffBootDiagHide").onclick = () => o.style.display = "none";
+      o.querySelector("#ffBootDiagCopy").onclick = async () => {
+        const txt = o.querySelector("#ffBootDiagBody").textContent || "";
+        try { await navigator.clipboard.writeText(txt); } catch (e) {}
+      };
+      return o;
+    }
+    function show(obj){
+      const o = ensureOverlay();
+      o.style.display = "block";
+      const meta = o.querySelector("#ffBootDiagMeta");
+      const body = o.querySelector("#ffBootDiagBody");
+      meta.textContent = `BUILD $20260217-224726 | ` + location.href;
+      body.textContent = JSON.stringify(obj, null, 2);
+    }
+    window.__ffShowBootDiag = show;
+    // Minimal banner so we know this index is live
+    document.addEventListener("DOMContentLoaded", () => {
+      const b = document.createElement("div");
+      b.id = "ffBootDiagBanner";
+      b.style.cssText = "position:fixed;left:12px;right:12px;top:12px;z-index:999998;padding:8px 10px;border-radius:12px;background:rgba(255,0,140,.18);border:1px solid rgba(255,0,140,.35);color:#fff;font:12px -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);";
+      b.textContent = "FF_DIAG_BOOT " + BUILD + " (tap for details)";
+      b.onclick = () => show({ title: "banner tapped", build: BUILD, href: location.href, ua: navigator.userAgent });
+      document.body.appendChild(b);
+    });
+  })();
+</script>
+
+<script type="module">
+  const BUILD = "20260217-224726";
+  const src = "./scripts/main.js";
+  async function diag(){
+    // 1) fetch status + headers
+    let fetchInfo = null;
     try {
-      if (document.getElementById("ffBootError")) return;
-      var o = document.createElement("div");
-      o.id = "ffBootError";
-      o.style.cssText = "position:fixed;inset:0;z-index:9999999;background:rgba(0,0,0,.92);color:#fff;padding:16px;overflow:auto;font:12px/1.4 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Arial,sans-serif;";
-      var h = document.createElement("div");
-      h.style.cssText = "font-size:14px;font-weight:700;margin-bottom:10px;";
-      h.textContent = "FinFlow boot error";
-      var pre = document.createElement("pre");
-      pre.style.cssText = "white-space:pre-wrap;word-break:break-word;background:rgba(255,255,255,.06);padding:12px;border-radius:12px;";
-      var payload = {
-        title: title,
-        build: window.__FF_BUILD || "",
+      const r = await fetch(src + "?v=" + Date.now(), { cache: "no-store" });
+      const ct = r.headers.get("content-type");
+      const cc = r.headers.get("cache-control");
+      const txt = await r.text();
+      fetchInfo = {
+        status: r.status,
+        ok: r.ok,
+        contentType: ct,
+        cacheControl: cc,
+        head: txt.slice(0, 120)
+      };
+    } catch (e) {
+      fetchInfo = { fetchError: String(e && (e.message||e)) };
+    }
+
+    // 2) dynamic import to get a real error message on iOS
+    try {
+      await import(src + "?v=" + Date.now());
+    } catch (e) {
+      const info = {
+        title: "main.js import failed",
+        build: BUILD,
         href: location.href,
         ua: navigator.userAgent,
-        info: info || {}
+        fetch: fetchInfo,
+        error: {
+          name: e && e.name,
+          message: e && e.message,
+          stack: e && e.stack
+        }
       };
-      pre.textContent = JSON.stringify(payload, null, 2);
-      var btn = document.createElement("button");
-      btn.textContent = "Copy";
-      btn.style.cssText = "margin-top:12px;padding:10px 12px;border-radius:12px;border:0;background:#0a84ff;color:#fff;font-weight:600;";
-      btn.onclick = function() {
-        try {
-          var txt = pre.textContent;
-          navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(txt) : null;
-          btn.textContent = "Copied";
-        } catch(e) {}
-      };
-      o.appendChild(h);
-      o.appendChild(pre);
-      o.appendChild(btn);
-      document.body.appendChild(o);
-    } catch(e) {}
-  }
-  // Expose for inline marker script
-  window.ffShowBootError = ffShowBootError;
-  </script>
+      if (window.__ffShowBootDiag) window.__ffShowBootDiag(info);
+      else alert(JSON.stringify(info, null, 2));
+      return;
+    }
 
-  <script type="module" src="scripts/main.js" onerror="ffShowBootError('main.js failed to load/parse', {hint:'check 404/MIME/case/import', src:this.src});"></script>
+    // If import succeeds, we can hide banner quickly
+    const banner = document.getElementById("ffBootDiagBanner");
+    if (banner) banner.style.display = "none";
+  }
+  diag();
+</script>
 
   <script>
     document.getElementById("mainsettings").onclick = () => {
