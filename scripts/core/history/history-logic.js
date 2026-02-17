@@ -1,10 +1,12 @@
 // scripts/core/history/history-logic.js
 
+import { lsGet, lsSet, lsRemove } from "../storage/storage-helpers.js";
+
 const STORAGE_KEYS = ["finflow_settings", "finflow_categories", "finflow_monthdata"];
 
 export function captureSnapshot(reason = "") {
   const data = {};
-  for (const k of STORAGE_KEYS) data[k] = localStorage.getItem(k);
+  for (const k of STORAGE_KEYS) data[k] = lsGet(k);
   return { type: "storage-snapshot", reason, ts: Date.now(), data };
 }
 
@@ -23,8 +25,8 @@ export function applySnapshot(snap) {
   // Let op: isRestoring wordt beheerd door de manager (index.js)
   for (const k of STORAGE_KEYS) {
     const v = snap.data[k];
-    if (v === null || v === undefined) localStorage.removeItem(k);
-    else localStorage.setItem(k, v);
+    if (v === null || v === undefined) lsRemove(k);
+    else lsSet(k, v);
   }
   return true;
 }

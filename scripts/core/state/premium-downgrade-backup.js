@@ -1,5 +1,7 @@
 // scripts/core/state/premium-downgrade-backup.js
 const BACKUP_KEY = "finflow_premium_backup_v1";
+import { lsGet, lsSet, lsRemove } from "../storage/storage-helpers.js";
+
 
 export function parseYearFromMonthKey(key) {
   const y = Number(String(key || "").split("-")[0]);
@@ -70,7 +72,7 @@ export function extractPremiumBackup({ settings, cats, monthData }) {
 
 export function writeBackup(payload) {
   try {
-    localStorage.setItem(BACKUP_KEY, JSON.stringify(payload));
+    lsSet(BACKUP_KEY, JSON.stringify(payload));
   } catch (e) {
     console.warn("Premium backup could not be stored:", e);
   }
@@ -78,7 +80,7 @@ export function writeBackup(payload) {
 
 export function readBackup() {
   try {
-    const raw = localStorage.getItem(BACKUP_KEY);
+    const raw = lsGet(BACKUP_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     return (parsed && typeof parsed === "object") ? parsed : null;
@@ -89,5 +91,5 @@ export function readBackup() {
 }
 
 export function clearBackup() {
-  try { localStorage.removeItem(BACKUP_KEY); } catch (_) {}
+  try { lsRemove(BACKUP_KEY); } catch (_) {}
 }

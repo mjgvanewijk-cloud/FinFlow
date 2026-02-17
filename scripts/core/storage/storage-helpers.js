@@ -1,5 +1,16 @@
 // scripts/core/storage/storage-helpers.js
 
+
+// Safe localStorage wrappers (iPhone Safari / WKWebView can throw SecurityError or QuotaExceededError)
+export function lsGet(key) {
+  try { return localStorage.getItem(key); } catch { return null; }
+}
+export function lsSet(key, value) {
+  try { localStorage.setItem(key, value); return true; } catch { return false; }
+}
+export function lsRemove(key) {
+  try { localStorage.removeItem(key); return true; } catch { return false; }
+}
 export function safeParseJson(s) {
   try {
     return JSON.parse(s);
@@ -42,8 +53,7 @@ export function deepEqual(a, b) {
 }
 
 export function isNoOpWrite(storageKey, nextValue) {
-  let curStr = null;
-  try { curStr = localStorage.getItem(storageKey); } catch { curStr = null; }
+  const curStr = localStorage.getItem(storageKey);
   const nextStr = JSON.stringify(nextValue);
 
   // Fast path: exact string match

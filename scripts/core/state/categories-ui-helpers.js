@@ -1,5 +1,7 @@
 // scripts/core/state/categories-ui-helpers.js
 
+import { lsGet, lsSet, lsRemove } from "../storage/storage-helpers.js";
+
 import { loadSettings, loadMonthData } from "../storage/index.js";
 import { simulateYear, resetCaches } from "../engine/index.js";
 import { t } from "../../i18n.js";
@@ -134,21 +136,21 @@ export function checkLimitWithCandidateCats(prevCats, candidateCats) {
   // IMPORTANT: This is a *preview* check. It must never create undo/redo history entries.
   // Do NOT use saveCats(...) here because that records snapshots (reason: "saveCats")
   // and can cause vague undo/redo feedback like "Teruggezet: Categorieën".
-  const prevCatsStrRaw = localStorage.getItem("finflow_categories");
+  const prevCatsStrRaw = lsGet("finflow_categories");
 
   try {
     try {
-      localStorage.setItem("finflow_categories", JSON.stringify(candidateCats || []));
+      lsSet("finflow_categories", JSON.stringify(candidateCats || []));
     } catch {
-      localStorage.setItem("finflow_categories", "[]");
+      lsSet("finflow_categories", "[]");
     }
     resetCaches();
     return findLimitViolation({ limitValue, minYear, maxYear });
   } finally {
     if (prevCatsStrRaw === null || prevCatsStrRaw === undefined) {
-      localStorage.removeItem("finflow_categories");
+      lsRemove("finflow_categories");
     } else {
-      localStorage.setItem("finflow_categories", prevCatsStrRaw);
+      lsSet("finflow_categories", prevCatsStrRaw);
     }
     resetCaches();
   }

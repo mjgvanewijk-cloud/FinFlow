@@ -1,5 +1,7 @@
 // scripts/core/state/categories-precommit-limit.js
 // Pre-commit multi-year banklimiet-check voor categorie-wijzigingen.
+import { lsGet, lsSet, lsRemove } from "../storage/storage-helpers.js";
+
 // Belangrijk: gebruikt EXACT dezelfde detectie als elders: bankStart + bankEnd.
 
 import { loadSettings, loadMonthData, loadCats } from "../storage/index.js";
@@ -80,7 +82,7 @@ export function precommitFindFirstCategoryLimitViolation({
   //
   // We now apply a temporary localStorage override WITHOUT recordSnapshot,
   // and restore the original raw string afterwards.
-  const prevCatsStrRaw = localStorage.getItem("finflow_categories");
+  const prevCatsStrRaw = lsGet("finflow_categories");
 
   const years = new Set();
   const absStart = getAbsoluteStartYear(settings);
@@ -100,10 +102,10 @@ export function precommitFindFirstCategoryLimitViolation({
   try {
     if (useCats !== prevCats) {
       try {
-        localStorage.setItem("finflow_categories", JSON.stringify(useCats || []));
+        lsSet("finflow_categories", JSON.stringify(useCats || []));
       } catch {
         // If serialization fails, fall back to empty array; still restore below.
-        localStorage.setItem("finflow_categories", "[]");
+        lsSet("finflow_categories", "[]");
       }
       resetCaches();
     }
@@ -130,9 +132,9 @@ export function precommitFindFirstCategoryLimitViolation({
   } finally {
     if (useCats !== prevCats) {
       if (prevCatsStrRaw === null || prevCatsStrRaw === undefined) {
-        localStorage.removeItem("finflow_categories");
+        lsRemove("finflow_categories");
       } else {
-        localStorage.setItem("finflow_categories", prevCatsStrRaw);
+        lsSet("finflow_categories", prevCatsStrRaw);
       }
       resetCaches();
     }

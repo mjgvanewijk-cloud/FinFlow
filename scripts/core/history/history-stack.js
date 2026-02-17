@@ -1,5 +1,7 @@
 // scripts/core/history/history-stack.js
 // In-memory undo/redo stacks + (Option A) persistence of snapshots incl. meta.
+import { lsGet, lsSet } from "../storage/storage-helpers.js";
+
 
 const HISTORY_STORAGE_KEY = "finflow_history_v1";
 const HISTORY_MAX_ENTRIES = 80; // cap to reduce localStorage pressure
@@ -79,14 +81,14 @@ export function persistNow() {
   };
 
   try {
-    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(payload));
+    lsSet(HISTORY_STORAGE_KEY, JSON.stringify(payload));
   } catch {
     // localStorage full / blocked -> ignore (history remains in-memory)
   }
 }
 
 export function restoreFromStorage() {
-  const raw = localStorage.getItem(HISTORY_STORAGE_KEY);
+  const raw = lsGet(HISTORY_STORAGE_KEY);
   if (!raw) return false;
 
   const obj = safeParse(raw);
