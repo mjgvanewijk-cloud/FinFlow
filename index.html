@@ -17,7 +17,169 @@
 </head>
 
 <body>
-  <script type="module">
+  
+<script>
+(function () {
+  if (window.__ffCrashOverlayInstalled) return;
+  window.__ffCrashOverlayInstalled = true;
+
+  function esc(s){ try { return String(s).replace(/[&<>"]/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]);}); } catch(e){ return ''+s; } }
+
+  var overlay, pre, meta, btnCopy, btnClose;
+  var logs = [];
+  function ensureOverlay(){
+    if (overlay) return;
+    overlay = document.createElement('div');
+    overlay.id = 'ff-crash-overlay';
+    overlay.style.cssText = [
+      'position:fixed','inset:0','z-index:2147483647','background:rgba(0,0,0,0.92)',
+      'color:#fff','font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif',
+      'padding:16px','box-sizing:border-box','display:none'
+    ].join(';');
+
+    var card = document.createElement('div');
+    card.style.cssText = [
+      'max-width:900px','margin:0 auto','background:rgba(255,255,255,0.06)',
+      'border:1px solid rgba(255,255,255,0.14)','border-radius:16px','padding:14px',
+      'box-shadow:0 20px 60px rgba(0,0,0,0.55)'
+    ].join(';');
+
+    var h = document.createElement('div');
+    h.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;';
+    var title = document.createElement('div');
+    title.style.cssText = 'font-size:16px;font-weight:700;letter-spacing:0.2px;';
+    title.textContent = 'FinFlow crash log (iPhone)';
+
+    var actions = document.createElement('div');
+    actions.style.cssText = 'display:flex;gap:8px;align-items:center;';
+
+    btnCopy = document.createElement('button');
+    btnCopy.type='button';
+    btnCopy.textContent='Copy';
+    btnCopy.style.cssText='appearance:none;border:0;border-radius:10px;padding:8px 10px;background:#2f7cf6;color:#fff;font-weight:700;';
+
+    btnClose = document.createElement('button');
+    btnClose.type='button';
+    btnClose.textContent='Close';
+    btnClose.style.cssText='appearance:none;border:0;border-radius:10px;padding:8px 10px;background:rgba(255,255,255,0.16);color:#fff;font-weight:700;';
+
+    actions.appendChild(btnCopy);
+    actions.appendChild(btnClose);
+
+    h.appendChild(title);
+    h.appendChild(actions);
+
+    meta = document.createElement('div');
+    meta.style.cssText='font-size:12px;opacity:0.85;margin:6px 0 10px 0;line-height:1.35;';
+    meta.textContent = '';
+
+    pre = document.createElement('pre');
+    pre.style.cssText = [
+      'white-space:pre-wrap','word-break:break-word','font-size:12px','line-height:1.35',
+      'margin:0','padding:12px','border-radius:12px','background:rgba(0,0,0,0.35)',
+      'border:1px solid rgba(255,255,255,0.12)','max-height:72vh','overflow:auto'
+    ].join(';');
+
+    card.appendChild(h);
+    card.appendChild(meta);
+    card.appendChild(pre);
+    overlay.appendChild(card);
+    document.documentElement.appendChild(overlay);
+
+    btnClose.addEventListener('click', function(){ overlay.style.display='none'; });
+    btnCopy.addEventListener('click', async function(){
+      try{
+        var text = buildText();
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          var ta = document.createElement('textarea');
+          ta.value=text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+        }
+        btnCopy.textContent='Copied';
+        setTimeout(function(){ btnCopy.textContent='Copy'; }, 900);
+      }catch(e){
+        btnCopy.textContent='Copy failed';
+        setTimeout(function(){ btnCopy.textContent='Copy'; }, 1200);
+      }
+    });
+  }
+
+  function nowIso(){
+    try { return new Date().toISOString(); } catch(e){ return ''+Date.now(); }
+  }
+
+  function buildText(){
+    var ua = navigator.userAgent || '';
+    var href = location.href || '';
+    var head = [
+      'time: ' + nowIso(),
+      'url: ' + href,
+      'ua: ' + ua
+    ].join('\n');
+    return head + '\n\n' + logs.join('\n');
+  }
+
+  function show(kind, message, source, lineno, colno, stack){
+    ensureOverlay();
+    var ua = navigator.userAgent || '';
+    meta.textContent = 'URL: ' + (location.href||'') + '   |   UA: ' + ua;
+    var lines = [];
+    lines.push('['+kind+'] ' + nowIso());
+    if (message) lines.push('message: ' + message);
+    if (source) lines.push('source: ' + source + (lineno!=null ? (':' + lineno + (colno!=null ? (':' + colno) : '')) : ''));
+    if (stack) lines.push('stack:\n' + stack);
+    lines.push('----');
+    var block = lines.join('\n');
+    logs.push(block);
+    pre.textContent = buildText();
+    overlay.style.display='block';
+  }
+
+  window.addEventListener('error', function(ev){
+    try{
+      var err = ev.error;
+      show(
+        'error',
+        ev.message || (err && err.message) || String(ev),
+        ev.filename,
+        ev.lineno,
+        ev.colno,
+        err && err.stack
+      );
+    }catch(e){}
+  });
+
+  window.addEventListener('unhandledrejection', function(ev){
+    try{
+      var reason = ev.reason;
+      var msg = (reason && reason.message) ? reason.message : (typeof reason === 'string' ? reason : JSON.stringify(reason));
+      var stack = reason && reason.stack;
+      show('unhandledrejection', msg, '', null, null, stack);
+    }catch(e){}
+  });
+
+  // Also mirror console.error into the overlay log
+  try{
+    var origErr = console.error;
+    console.error = function(){
+      try{
+        var args = Array.prototype.slice.call(arguments);
+        var msg = args.map(function(a){
+          if (a instanceof Error) return (a.message + '\n' + (a.stack||''));
+          if (typeof a === 'object') { try { return JSON.stringify(a); } catch(e){ return String(a); } }
+          return String(a);
+        }).join(' ');
+        logs.push('[console.error] ' + nowIso() + '\n' + msg + '\n----');
+        if (overlay && overlay.style.display==='block') pre.textContent = buildText();
+      }catch(e){}
+      return origErr.apply(console, arguments);
+    };
+  }catch(e){}
+})();
+</script>
+
+<script type="module">
     import { UNDO_SVG, REDO_SVG, GEAR_SVG, FOLDER_SVG } from "./scripts/ui/components/icons.js";
     
     document.addEventListener('DOMContentLoaded', () => {
