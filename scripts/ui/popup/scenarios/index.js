@@ -1,7 +1,10 @@
 // scripts/ui/popup/scenarios/index.js
 
-import { t } from "../../../i18n.js";
-import { isPremiumActiveForUI, openPremiumTrialPopup } from "../../../core/state/premium.js";
+// NOTE:
+// Dit sheet moet altijd kunnen openen vanaf de navpil-calculator.
+// Op iPhone (Safari/GitHub Pages) kan de Premium-gate flow falen bij lege of verse storage,
+// waardoor je de melding "FinFlow rekenmodellen konden niet laden" krijgt.
+// Daarom openen we het Rekenmodellen-menu hier zonder Premium-gate.
 
 import { createOverlayAndContainer, bindOverlayClose, makeCloseAll } from "./state.js";
 import { renderScenariosMenu } from "./menu-render.js";
@@ -11,21 +14,6 @@ import { openBurnrateScenarioSheet } from "./burnrate-sheet.js";
 import { openGoalScenarioSheet } from "./goal-sheet.js";
 
 export function openScenariosSheet() {
-  // Premium wall aanwezig, maar (in jouw testversie) zal dit doorgaans direct doorgaan
-  // doordat premium.active = true gezet is.
-  if (!isPremiumActiveForUI()) {
-    openPremiumTrialPopup(
-      () => {
-        try { openScenariosSheet(); } catch (_) {}
-      },
-      {
-        title: t("messages.premium_scenarios_title"),
-        topText: t("messages.premium_scenarios_top"),
-      }
-    );
-    return;
-  }
-
   const { overlay, container, prevOverflow } = createOverlayAndContainer(
     "ff-month-category-sheet ff-month-category-card ff-month-category-sheet--scenarios ff-scenarios-sheet"
   );
