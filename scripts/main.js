@@ -29,6 +29,82 @@ import { maybeHandleTrialExpiryDowngrade } from "./core/state/premium-trial-expi
 // Passieve context-help (wolkje + highlights bij idle)
 import { initHelpCloud } from "./ui/helpcloud/index.js";
 
+// ============================================================
+// iOS/Safari diagnostics (only shows when boot fails)
+// - Prevents the "black screen + only nav-pill" symptom from being silent
+// - Does NOT change normal behavior when boot succeeds
+// ============================================================
+
+function showFatalBootOverlay(title, details) {
+  try {
+    // Avoid double overlays
+    const existing = document.getElementById("ffFatalBootOverlay");
+    if (existing) existing.remove();
+
+    const overlay = document.createElement("div");
+    overlay.id = "ffFatalBootOverlay";
+    overlay.style.position = "fixed";
+    overlay.style.inset = "0";
+    overlay.style.zIndex = "999999";
+    overlay.style.background = "rgba(0,0,0,.72)";
+    overlay.style.backdropFilter = "blur(10px)";
+    overlay.style.webkitBackdropFilter = "blur(10px)";
+    overlay.style.display = "flex";
+    overlay.style.alignItems = "center";
+    overlay.style.justifyContent = "center";
+    overlay.style.padding = "16px";
+
+    const card = document.createElement("div");
+    card.style.width = "min(560px, 100%)";
+    card.style.background = "rgba(28,28,30,.98)";
+    card.style.border = "1px solid rgba(255,255,255,.14)";
+    card.style.borderRadius = "18px";
+    card.style.boxShadow = "0 18px 40px rgba(0,0,0,.45)";
+    card.style.padding = "16px";
+    card.style.color = "#fff";
+    card.style.fontFamily = "-apple-system, system-ui, Segoe UI, Roboto, Arial";
+
+    const h = document.createElement("div");
+    h.style.fontSize = "16px";
+    h.style.fontWeight = "800";
+    h.style.marginBottom = "10px";
+    h.textContent = title || "FinFlow kon niet starten";
+
+    const p = document.createElement("pre");
+    p.style.whiteSpace = "pre-wrap";
+    p.style.wordBreak = "break-word";
+    p.style.fontSize = "12px";
+    p.style.lineHeight = "1.35";
+    p.style.opacity = "0.92";
+    p.style.margin = "0";
+    p.textContent = String(details || "Onbekende fout");
+
+    const hint = document.createElement("div");
+    hint.style.marginTop = "12px";
+    hint.style.fontSize = "12px";
+    hint.style.opacity = "0.85";
+    hint.textContent = "Tip: sluit Safari volledig (app switcher) en open opnieuw. Als dit blijft: wis Safari websitegegevens voor mjgvanewijk-cloud.github.io.";
+
+    card.appendChild(h);
+    card.appendChild(p);
+    card.appendChild(hint);
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+  } catch (_) {}
+}
+
+// Show runtime failures on-screen (iPhone Safari often hides console)
+try {
+  window.addEventListener("error", (e) => {
+    const msg = e?.error?.stack || e?.message || String(e);
+    showFatalBootOverlay("FinFlow runtime error", msg);
+  });
+  window.addEventListener("unhandledrejection", (e) => {
+    const msg = e?.reason?.stack || e?.reason?.message || String(e?.reason || e);
+    showFatalBootOverlay("FinFlow promise error", msg);
+  });
+} catch (_) {}
+
 /**
  * Centraal beheer van data-wijzigingen.
  */
@@ -186,8 +262,16 @@ function setupUndoRedoUI() {
 window.handleDataChanged = handleDataChanged;
 
 function updateStaticUI() {
-    const settingsRaw = localStorage.getItem('finflow_settings');
-    const settings = settingsRaw ? JSON.parse(settingsRaw) : {};
+    // IMPORTANT (iPhone/Safari + GitHub Pages): localStorage can contain
+    // corrupted/partial JSON strings after upgrades or storage pressure.
+    // Never JSON.parse the raw string here; use the hardened loader.
+    let settings = {};
+    try {
+      // loadSettings() already provides defaults + safe parse.
+      settings = (typeof loadSettings === "function" ? loadSettings() : {}) || {};
+    } catch (_) {
+      settings = {};
+    }
     const isPremium = settings.isPremium === true;
 
     const elements = document.querySelectorAll('[data-i18n]');
@@ -347,8 +431,8 @@ let __bootFinalized = false;
         setupUndoRedoUI();
 
         handleDataChanged();
-        const settingsRaw = localStorage.getItem('finflow_settings');
-        const settings = settingsRaw ? JSON.parse(settingsRaw) : {};
+        // Never parse raw localStorage here; use hardened loader.
+        const settings = loadSettings() || {};
         
         if (!settings.welcomeShown) {
             document.body.classList.add('wizard-active');
@@ -367,6 +451,8 @@ let __bootFinalized = false;
 } catch (e) {
         // Tekst aangepast naar i18n
         console.error(t("errors.boot.critical_failed"), e.message, e.stack);
+        // Also surface on-screen (prevents silent black screen on iPhone)
+        showFatalBootOverlay(t("errors.boot.critical_failed"), e?.stack || e?.message || String(e));
     }
     finally {
         finalizeBoot();
@@ -374,108 +460,6 @@ let __bootFinalized = false;
 }
 
 // Start de applicatie
-bootApp().catch((err) => {
-  try {
-    console.error("[FinFlow] Boot failed:", err);
-
-    // Minimal, dependency-free fatal overlay (works even if UI modules failed)
-    const overlay = document.createElement("div");
-    overlay.style.position = "fixed";
-    overlay.style.inset = "0";
-    overlay.style.zIndex = "999999";
-    overlay.style.background = "rgba(0,0,0,0.85)";
-    overlay.style.backdropFilter = "blur(10px)";
-    overlay.style.webkitBackdropFilter = "blur(10px)";
-    overlay.style.display = "flex";
-    overlay.style.alignItems = "center";
-    overlay.style.justifyContent = "center";
-    overlay.style.padding = "24px";
-
-    const card = document.createElement("div");
-    card.style.maxWidth = "520px";
-    card.style.width = "100%";
-    card.style.borderRadius = "18px";
-    card.style.background = "rgba(28,28,30,0.92)";
-    card.style.border = "1px solid rgba(255,255,255,0.12)";
-    card.style.boxShadow = "0 20px 60px rgba(0,0,0,0.55)";
-    card.style.padding = "18px 18px 14px 18px";
-    card.style.color = "rgba(255,255,255,0.92)";
-    card.style.fontFamily = "-apple-system, system-ui, Segoe UI, Roboto, Arial, sans-serif";
-
-    const h = document.createElement("div");
-    h.textContent = "FinFlow kan niet starten";
-    h.style.fontSize = "20px";
-    h.style.fontWeight = "700";
-    h.style.marginBottom = "10px";
-
-    const p = document.createElement("div");
-    p.style.fontSize = "14px";
-    p.style.lineHeight = "1.35";
-    p.style.color = "rgba(255,255,255,0.78)";
-    p.innerHTML =
-      "Op iPhone/Safari gebeurt dit meestal door <b>geblokkeerde opslag</b> (Private Browsing) of door <b>oude cache</b> na een update.<br><br>" +
-      "<b>Probeer dit:</b><br>" +
-      "1) Open in een normale tab (geen privémodus).<br>" +
-      "2) Sluit Safari volledig en open opnieuw.<br>" +
-      "3) Als het blijft: Instellingen → Safari → Wis websitegegevens.<br>";
-
-    const details = document.createElement("pre");
-    details.style.marginTop = "12px";
-    details.style.padding = "10px";
-    details.style.borderRadius = "12px";
-    details.style.background = "rgba(0,0,0,0.35)";
-    details.style.border = "1px solid rgba(255,255,255,0.10)";
-    details.style.color = "rgba(255,255,255,0.78)";
-    details.style.fontSize = "12px";
-    details.style.whiteSpace = "pre-wrap";
-    details.style.wordBreak = "break-word";
-    const msg = (err && (err.stack || err.message)) ? (err.stack || err.message) : String(err);
-    details.textContent = msg;
-
-    const btnRow = document.createElement("div");
-    btnRow.style.display = "flex";
-    btnRow.style.gap = "10px";
-    btnRow.style.marginTop = "14px";
-
-    const reloadBtn = document.createElement("button");
-    reloadBtn.type = "button";
-    reloadBtn.textContent = "Herlaad";
-    reloadBtn.style.flex = "1";
-    reloadBtn.style.height = "44px";
-    reloadBtn.style.borderRadius = "12px";
-    reloadBtn.style.border = "0";
-    reloadBtn.style.background = "rgba(10,132,255,1)";
-    reloadBtn.style.color = "white";
-    reloadBtn.style.fontWeight = "700";
-    reloadBtn.addEventListener("click", () => location.reload());
-
-    const closeBtn = document.createElement("button");
-    closeBtn.type = "button";
-    closeBtn.textContent = "Sluiten";
-    closeBtn.style.flex = "1";
-    closeBtn.style.height = "44px";
-    closeBtn.style.borderRadius = "12px";
-    closeBtn.style.border = "1px solid rgba(255,255,255,0.16)";
-    closeBtn.style.background = "rgba(44,44,46,0.9)";
-    closeBtn.style.color = "rgba(255,255,255,0.92)";
-    closeBtn.style.fontWeight = "700";
-    closeBtn.addEventListener("click", () => overlay.remove());
-
-    btnRow.appendChild(reloadBtn);
-    btnRow.appendChild(closeBtn);
-
-    card.appendChild(h);
-    card.appendChild(p);
-    card.appendChild(details);
-    card.appendChild(btnRow);
-
-    overlay.appendChild(card);
-    document.body.appendChild(overlay);
-  } catch (e) {
-    // last resort
-    alert("FinFlow kan niet starten. Bekijk de console voor details.");
-  }
-});
-
+bootApp();
 
      
