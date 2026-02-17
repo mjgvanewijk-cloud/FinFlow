@@ -1,5 +1,5 @@
 // scripts/year/year.js
-
+//
 // Public entry for the Year module.
 // This file stays small and stable: it wires UI entry points and delegates
 // the Year Settings menu logic to dedicated modules.
@@ -15,6 +15,23 @@ export function initYearModule(onChange) {
   setOnDataChangedCallback(onChange);
   setupHeaderButtons();
   showTable();
+}
+
+/**
+ * Resolve the absolute URL to the scenarios module in a way that works on:
+ * - GitHub Pages project sites (https://<user>.github.io/<repo>/...)
+ * - localhost/dev servers
+ * - iOS Safari (strict module resolution + caching quirks)
+ */
+function getScenariosModuleUrl() {
+  const { origin, pathname } = window.location;
+
+  // GitHub Pages project site path is usually "/<repo>/..."
+  // We take the first path segment as base if present.
+  const seg = (pathname || "/").split("/").filter(Boolean)[0];
+  const base = seg ? `/${seg}/` : "/";
+
+  return `${origin}${base}scripts/ui/popup/scenarios/index.js`;
 }
 
 function setupHeaderButtons() {
@@ -37,24 +54,11 @@ function setupHeaderButtons() {
     scenariosBtn.onclick = (e) => {
       e.preventDefault();
       e.stopPropagation();
-
       (async () => {
-        try {
-          // FIX: Gebruik een direct relatief pad als string. 
-          // Dit is veel betrouwbaarder voor iOS Safari op GitHub Pages dan de URL-constructor.
-          // We behouden 'popup' (enkelvoud) omdat 'popups' eerder niet werkte.
-          const mod = await import("../ui/popup/scenarios/index.js");
-          
-          if (mod && mod.openScenariosSheet) {
-            mod.openScenariosSheet();
-          } else {
-            throw new Error("openScenariosSheet not found in module");
-          }
-        } catch (err) {
-          console.error("[Scenarios] failed to load", err);
-          // De alert blijft, maar we weten nu dat het import-proces zelf verbeterd is.
-          alert("FinFlow: rekenmodellen konden niet laden. Controleer of het bestand 'scripts/ui/popup/scenarios/index.js' op GitHub staat.");
-        }
+        // Robust: build an absolute URL that is correct under "/FinFlow/".
+        const url = getScenariosModuleUrl();
+        const mod = await import(url);
+        mod.openScenariosSheet();
       })();
     };
   }
