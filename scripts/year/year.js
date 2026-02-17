@@ -40,13 +40,14 @@ function setupHeaderButtons() {
 
       (async () => {
         try {
-          // IMPORTANT: resolve module URL relative to this file (works on GitHub Pages subfolders + iOS Safari)
-          const moduleUrl = new URL("../ui/popup/scenarios/index.js", import.meta.url);
-          const mod = await import(moduleUrl.href);
+          // FIX: Gebruik 'popups' (meervoud) en een direct relatief pad
+          // Dit is veel robuuster voor iOS Safari op GitHub Pages
+          const mod = await import("../ui/popups/scenarios/index.js");
           mod.openScenariosSheet();
         } catch (err) {
           console.error("[Scenarios] failed to load", err);
-          alert("FinFlow: rekenmodellen konden niet laden. Sluit Safari volledig en probeer opnieuw.");
+          // De i18n melding blijft behouden zoals je wenste
+          alert("FinFlow: rekenmodellen konden niet laden. Controleer of de map 'scripts/ui/popups/scenarios/' bestaat.");
         }
       })();
     };
