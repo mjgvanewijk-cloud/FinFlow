@@ -1,0 +1,221 @@
+/* styles/components/nav.css */
+
+/* ============================================================ */
+/* NAV-PILL: JAARNAVIGATIE                                      */
+/* ============================================================ */
+
+.nav-pill {
+  /* Zorg dat padding de breedte niet opdrijft */
+  box-sizing: border-box !important;
+  position: sticky;
+  top: calc(env(safe-area-inset-top, 0px) + 10px);
+  z-index: 1000;
+
+  display: flex;
+  align-items: center;
+
+  background: var(--apple-bg-secondary) !important;
+  border: 1px solid var(--apple-separator) !important;
+  border-radius: 999px;
+
+  /* Iets meer marge op mobiel voor stabiliteit */
+  width: min(520px, calc(100% - 20px));
+  height: 60px;
+  margin: 10px auto;
+
+  padding: 0 4px;
+  overflow: hidden;
+
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+}
+
+/* Basis zone */
+.nav-zone {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+/* Links/rechts: vaste slots, maar kleiner op iPhone voor meer ruimte in het midden */
+#navZoneLeft,
+#navZoneRight {
+  /* Op laptops 56px, op iPhone schaalt dit naar 44px (minimum touch target) */
+  flex: 0 0 clamp(44px, 12vw, 56px);
+  cursor: pointer;
+}
+
+/* Midden: krijgt alle resterende ruimte */
+#navZoneCenter {
+  flex: 1 1 auto;
+  min-width: 0; 
+  cursor: default;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /* Iets krapper op mobiel zodat knoppen niet buiten beeld vallen */
+  gap: clamp(4px, 2.5vw, 14px);
+  padding: 0 clamp(2px, 1.5vw, 10px);
+}
+
+/* Pijlen: vaste tap target */
+.nav-pill .year-arrow {
+  all: unset !important;
+
+  /* Gebruik de volledige breedte van de zij-zone */
+  width: 100% !important;
+  height: 44px !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  color: var(--apple-blue) !important;
+
+  /* Schaalt mee met schermbreedte */
+  font-size: clamp(24px, 6vw, 34px) !important;
+
+  line-height: 1 !important;
+  font-weight: 900 !important;
+
+  cursor: pointer !important;
+  text-align: center !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.nav-pill .year-arrow:active {
+  transform: scale(0.96);
+}
+
+/* Jaar */
+#currentYear {
+  color: var(--apple-label) !important;
+  font-weight: 800;
+
+  /* Iets compacter op kleine iPhones */
+  font-size: clamp(16px, 4.5vw, 22px);
+
+  min-width: fit-content;
+  white-space: nowrap;
+
+  text-align: center;
+  letter-spacing: -0.2px;
+  cursor: default;
+}
+
+/* Undo/Redo & Settings */
+#undoBtn,
+#redoBtn,
+#scenariosBtn,
+#settingsBtn {
+  all: unset;
+  
+  /* Iets compacter op mobiel */
+  width: clamp(32px, 8vw, 38px);
+  height: clamp(32px, 8vw, 38px);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: var(--apple-blue) !important;
+  cursor: pointer;
+  border-radius: 999px;
+  -webkit-tap-highlight-color: transparent;
+  /* Voorkomt dat knoppen 'geplet' worden op kleine schermen */
+  flex-shrink: 0;
+}
+
+#undoBtn .nav-icon,
+#redoBtn .nav-icon,
+#scenariosBtn svg,
+#settingsBtn svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+
+#undoBtn:active,
+#redoBtn:active,
+#scenariosBtn:active,
+#settingsBtn:active {
+  transform: scale(0.96);
+}
+
+#undoBtn[disabled],
+#redoBtn[disabled] {
+  opacity: 0.35;
+  cursor: default;
+  transform: none;
+  color: var(--apple-label-tertiary) !important;
+  pointer-events: none;
+}
+
+
+/* Scenarios icon uses same premium purple as the Scenarios sheet header */
+#scenariosBtn {
+  color: rgb(175, 82, 222) !important;
+}
+
+/* Calculator (scenarios) button: slightly larger + a bit wider */
+#scenariosBtn {
+  width: clamp(38px, 9.5vw, 48px);
+  height: clamp(34px, 8.5vw, 42px);
+}
+
+#scenariosBtn svg {
+  width: 24px;
+  height: 24px;
+}
+/* Highlight states (Alle regels behouden) */
+.nav-pill.highlight-left,
+.nav-pill.highlight-right {
+  background-color: var(--apple-blue) !important;
+  border-color: transparent !important;
+}
+
+.nav-pill.highlight-left .year-arrow,
+.nav-pill.highlight-right .year-arrow,
+.nav-pill.highlight-left #currentYear,
+.nav-pill.highlight-right #currentYear,
+.nav-pill.highlight-left #settingsBtn,
+.nav-pill.highlight-right #settingsBtn,
+  .nav-pill.highlight-left #undoBtn,
+  .nav-pill.highlight-right #undoBtn,
+  .nav-pill.highlight-left #redoBtn,
+  .nav-pill.highlight-right #redoBtn,
+  .nav-pill.highlight-left #scenariosBtn,
+  .nav-pill.highlight-right #scenariosBtn {
+  color: #ffffff !important;
+}
+
+/* Disabled wins, even during highlight */
+.nav-pill.highlight-left #undoBtn[disabled],
+.nav-pill.highlight-left #redoBtn[disabled],
+.nav-pill.highlight-right #undoBtn[disabled],
+.nav-pill.highlight-right #redoBtn[disabled] {
+  color: var(--apple-label-tertiary) !important;
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+/* Extra krappe schermen (zoals iPhone SE of Display Zoom) */
+@media (max-width: 380px) {
+  #navZoneCenter { 
+    gap: 4px; 
+    padding: 0 2px; 
+  }
+}
+
+/* Wizard blokkade (Alle regels behouden) */
+body.wizard-active .nav-pill,
+body.wizard-active .navpil {
+  display: none !important;
+}
+
+body.wizard-active .table-container {
+  display: none !important;
+}
