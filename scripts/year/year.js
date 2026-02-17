@@ -33,12 +33,16 @@ function setupHeaderButtons() {
     const lbl = t("ui_scenarios_nav_label");
     scenariosBtn.setAttribute("aria-label", lbl);
     scenariosBtn.setAttribute("title", lbl);
+
     scenariosBtn.onclick = (e) => {
       e.preventDefault();
       e.stopPropagation();
+
       (async () => {
         try {
-          const mod = await import("../ui/popup/scenarios/index.js");
+          // IMPORTANT: resolve module URL relative to this file (works on GitHub Pages subfolders + iOS Safari)
+          const moduleUrl = new URL("../ui/popup/scenarios/index.js", import.meta.url);
+          const mod = await import(moduleUrl.href);
           mod.openScenariosSheet();
         } catch (err) {
           console.error("[Scenarios] failed to load", err);
