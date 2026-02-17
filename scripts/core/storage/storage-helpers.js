@@ -42,7 +42,8 @@ export function deepEqual(a, b) {
 }
 
 export function isNoOpWrite(storageKey, nextValue) {
-  const curStr = localStorage.getItem(storageKey);
+  let curStr = null;
+  try { curStr = localStorage.getItem(storageKey); } catch { curStr = null; }
   const nextStr = JSON.stringify(nextValue);
 
   // Fast path: exact string match

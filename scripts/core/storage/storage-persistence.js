@@ -1,17 +1,5 @@
 // scripts/core/storage/storage-persistence.js
 import { t } from "../../i18n.js";
-
-function _ffSetLocalStorage(key, value) {
-  try {
-    localStorage.setItem(key, value);
-  } catch (e) {
-    // Throw a clear error so bootApp() can show a user-friendly overlay on iPhone/Safari.
-    const err = new Error(`FINFLOW_STORAGE_WRITE_FAILED: ${key}`);
-    err.cause = e;
-    throw err;
-  }
-}
-
 import { recordSnapshot } from "../history/index.js";
 import { isNoOpWrite } from "./storage-helpers.js";
 import { ensureHistoryBatch } from "./storage-history.js";
@@ -30,8 +18,13 @@ export function saveCats(arr, reasonOverride = "") {
   // recordSnapshot() itself only stores *user-marked* steps, so boot/init writes
   // (without a user marker) remain non-undoable.
   ensureHistoryBatch();  recordSnapshot(reasonOverride || "");
-  _ffSetLocalStorage("finflow_categories", nextStr);
-  return true;
+  try {
+    localStorage.setItem("finflow_categories", nextStr);
+    return true;
+  } catch (e) {
+    console.warn("[storage] saveCats failed (storage blocked/quota)", e);
+    return false;
+  }
 }
 
 export function loadMonthData() {
@@ -47,8 +40,13 @@ export function saveMonthData(obj, reasonOverride = "") {
   // See saveCats(): recordSnapshot() filters out non-user steps, so this is safe
   // even when the key is written for the first time.
   ensureHistoryBatch();  recordSnapshot(reasonOverride || "");
-  _ffSetLocalStorage("finflow_monthdata", nextStr);
-  return true;
+  try {
+    localStorage.setItem("finflow_monthdata", nextStr);
+    return true;
+  } catch (e) {
+    console.warn("[storage] saveMonthData failed (storage blocked/quota)", e);
+    return false;
+  }
 }
 
 export function loadSettings() {
@@ -73,6 +71,11 @@ export function saveSettings(obj, reasonOverride = "") {
   if (noOp) return false;
   // See saveCats(): recordSnapshot() filters out non-user steps.
   ensureHistoryBatch();  recordSnapshot(reasonOverride || "");
-  _ffSetLocalStorage("finflow_settings", nextStr);
-  return true;
+  try {
+    localStorage.setItem("finflow_settings", nextStr);
+    return true;
+  } catch (e) {
+    console.warn("[storage] saveSettings failed (storage blocked/quota)", e);
+    return false;
+  }
 }
