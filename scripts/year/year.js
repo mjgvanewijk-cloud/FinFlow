@@ -18,6 +18,13 @@ export function initYearModule(onChange) {
   showTable();
 }
 
+/**
+ * Resolve the absolute URL to the scenarios module in a way that works on:
+ * - GitHub Pages project sites (https://<user>.github.io/<repo>/...)
+ * - localhost/dev servers
+ * - iOS Safari (strict module resolution + caching quirks)
+ */
+
 function setupHeaderButtons() {
   const settingsBtn = document.getElementById("settingsBtn");
   const scenariosBtn = document.getElementById("scenariosBtn");
@@ -38,10 +45,6 @@ function setupHeaderButtons() {
     scenariosBtn.onclick = (e) => {
       e.preventDefault();
       e.stopPropagation();
-      // IMPORTANT:
-      // iOS Safari + GitHub Pages can intermittently fail dynamic import(...) of an
-      // absolute URL (cache/MIME quirks). A static import is the most reliable and
-      // "App Store"-friendly approach (WKWebView behaves similarly).
       openScenariosSheet();
     };
   }
