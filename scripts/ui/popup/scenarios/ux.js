@@ -1,4 +1,4 @@
-// scripts/ui/popup/scenarios/_ux.js
+// scripts/ui/popup/scenarios/ux.js
 
 import { parseMoneyInput } from "../money-input.js";
 

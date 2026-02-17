@@ -3,7 +3,7 @@
 import { t } from "../../../i18n.js";
 import { parseMoneyInput } from "../money-input.js";
 import { createOverlayAndContainer, bindOverlayClose, makeCloseAll } from "./state.js";
-import { attachMoneyEditUX, attachPercentEditUX, showInlineError } from "./_ux.js";
+import { attachMoneyEditUX, attachPercentEditUX, showInlineError } from "./ux.js";
 
 function parseNumber(input) {
   const raw = String(input || "").trim();
